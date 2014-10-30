@@ -7,4 +7,7 @@
     
     <string name="text_start_new_game">开始新游戏</string>
 
+    <string name="text_yes">出</string>
+    <string name="text_note">提示</string>
+    <string name="text_no">不出</string>
 </resources>

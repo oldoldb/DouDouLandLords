@@ -9,6 +9,13 @@ public class Card extends BaseCard{
 	private int height;
 	private int x;
 	private int y;
+	private boolean isSelected;
+	public boolean isSelected() {
+		return isSelected;
+	}
+	public void setSelected(boolean isSelected) {
+		this.isSelected = isSelected;
+	}
 	public int getX() {
 		return x;
 	}
