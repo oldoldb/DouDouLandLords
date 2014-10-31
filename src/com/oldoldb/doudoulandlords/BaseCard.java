@@ -50,6 +50,6 @@ public class BaseCard implements Comparable<BaseCard>{
 	@Override
 	public int compareTo(BaseCard another) {
 		// TODO Auto-generated method stub
-		return another.getSortValue() - this.sortValue;
+		return -(another.getSortValue() - this.sortValue);
 	}
 }

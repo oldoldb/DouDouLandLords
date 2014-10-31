@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Random;
 
 import com.oldoldb.doudoulandlords.CardColor.Color;
+import com.oldoldb.doudoulandlords.GameLogic.CombinationType;
 
 import android.R.integer;
 import android.app.Activity;
@@ -55,6 +56,7 @@ public class GameView extends View{
 	private List<Card> mPlayerPopCards;
 	private List<Card> mLeftPopCards;
 	private List<Card> mRightPopCards; 
+	private List<Card> mLastPopCards; 
 	private int mDisplayWidth;
 	private int mDisplayHeight;
 	private int mCardWidth;
@@ -66,6 +68,10 @@ public class GameView extends View{
 	private BaseAction mNoteAction;
 	private boolean mNeedShowAction = false;
 	private boolean mNeedShowPopCards = false;
+	private GameAI mGameAI;
+	private boolean mStartNewRound = true;
+	private int mLastPopIndex;
+	private GameLogic.CombinationType mLastPopType = CombinationType.NEWROUND;
 	public GameView(Context context, int width, int height) {
 		super(context);
 		// TODO Auto-generated constructor stub
@@ -89,21 +95,44 @@ public class GameView extends View{
 		mAllCards.add(new Card(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.a5_16), mCardWidth, mCardHeight), new CardType(Color.None, VALUE_OF_BLACK_JOKER)));
 		mAllCards.add(new Card(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.a5_17), mCardWidth, mCardHeight), new CardType(Color.None, VALUE_OF_RED_JOKER)));
 	}
+
+	private void initStateForNewGame()
+	{
+		mIndexOfDispatchCard = 0;
+		mIndexOfDispatchLeftCard = 0;
+		mIndexOfDispatchRightCard = 0;
+		mPlayerCards.clear();
+		mLeftCards.clear();
+		mRightCards.clear();
+		mPlayerPopCards.clear();
+		mLeftPopCards.clear();
+		mRightPopCards.clear();
+		mLastPopCards.clear();
+		mLastPopType = CombinationType.NEWROUND;
+		mLastPopIndex = INDEX_OF_PLAYER;
+		clearCardsState();
+	}
 	private void initVariables(int width, int height)
 	{
-		mPlayerPopCards = new ArrayList<Card>();
-		mLeftPopCards = new ArrayList<Card>();
-		mRightPopCards = new ArrayList<Card>();
-		mAllCards = new ArrayList<Card>();
-		mPlayerCards = new ArrayList<Card>();
-		mLeftCards = new ArrayList<Card>();
-		mRightCards = new ArrayList<Card>();
 		mDisplayWidth = width;
 		mDisplayHeight = height;
 		mCardWidth = Math.min(mDisplayWidth * 2 / 27, mDisplayWidth / 12);
 		mCardHeight = Math.min(mDisplayHeight / 6, mDisplayHeight * 2 / 27);
 		mActionWidth = mDisplayWidth / 9;
 		mActionHeight = mDisplayHeight / 9;
+		mAllCards = new ArrayList<Card>();
+		mPlayerPopCards = new ArrayList<Card>();
+		mLeftPopCards = new ArrayList<Card>();
+		mRightPopCards = new ArrayList<Card>();
+		mPlayerCards = new ArrayList<Card>();
+		mLeftCards = new ArrayList<Card>();
+		mRightCards = new ArrayList<Card>();
+		mLastPopCards = new ArrayList<Card>();
+		mIndexOfDispatchCard = 0;
+		mIndexOfDispatchLeftCard = 0;
+		mIndexOfDispatchRightCard = 0;
+		mLastPopIndex = INDEX_OF_PLAYER;
+		mGameAI = GameAI.getInstance();
 	}
 	public void showDialog()
 	{
@@ -117,6 +146,12 @@ public class GameView extends View{
 				startNewGame();
 			}
 		}).show();
+	}
+	private void clearCardsState()
+	{
+		for(Card card : mAllCards){
+			card.setSelected(false);
+		}
 	}
 	private void startNewGame()
 	{
@@ -190,6 +225,11 @@ public class GameView extends View{
 		if(mNeedShowPopCards){
 			drawPopCards(canvas);
 		}
+	}
+	
+	private boolean isGameOver()
+	{
+		return mPlayerCards.isEmpty() || mLeftCards.isEmpty() || mRightCards.isEmpty();
 	}
 
 	private void drawPopCards(Canvas canvas)
@@ -320,13 +360,34 @@ public class GameView extends View{
 	{
 		if(index == INDEX_OF_NO){
 			restoreTouchCards();
+			mPlayerPopCards.clear();
 		} else if(index == INDEX_OF_YES){
-			popSelectedCards();
+			List<Card> selectedCards = getSelectedCards();
+			if(GameLogic.isMeetLogic(mLastPopType, mLastPopCards, selectedCards) || mLastPopIndex == INDEX_OF_PLAYER){
+				popSelectedCards();
+				mLastPopIndex = INDEX_OF_PLAYER;
+			} else{
+				restoreTouchCards();
+				invalidate();
+			}
 		}
+		inAITurn();
 	}
-	
+	private List<Card> getSelectedCards()
+	{
+		List<Card> selectedCards = new ArrayList<Card>();
+		int size = mPlayerCards.size();
+		for(int i=0;i<size;i++){
+			Card card = mPlayerCards.get(i);
+			if(card.isSelected()){
+				selectedCards.add(card);
+			}
+		}
+		return selectedCards;
+	}
 	private void popSelectedCards()
 	{
+		mPlayerPopCards.clear();
 		int size = mPlayerCards.size();
 		for(int i=0;i<size;i++){
 			Card card = mPlayerCards.get(i);
@@ -341,8 +402,16 @@ public class GameView extends View{
 		setPlayerCardsPosition();
 		mNeedShowPopCards = true;
 		invalidate();
-		
-		inAITurn();
+		if(isGameOver()){
+			initStateForNewGame();
+			startNewGame();
+			return ;
+		}
+		if(GameLogic.getCardsType(mPlayerPopCards) != CombinationType.NONE){
+			mLastPopType = GameLogic.getCardsType(mPlayerPopCards);
+			mLastPopCards.clear();
+			mLastPopCards.addAll(mPlayerPopCards);
+		}
 	}
 	
 	private void inAITurn()
@@ -378,19 +447,25 @@ public class GameView extends View{
 	}
 	private void handleLeftTurn()
 	{
+		mLeftPopCards.clear();
+		if(mLastPopIndex == INDEX_OF_LEFT){
+			mLastPopType = CombinationType.NEWROUND;
+		}
 		getLeftPopCards();
 		setLeftPopCardsPosition();
 		setLeftCardsPosition();
 		mNeedShowPopCards = true;
 		invalidate();
+		if(GameLogic.getCardsType(mLeftPopCards) != CombinationType.NONE){
+			mLastPopType = GameLogic.getCardsType(mLeftPopCards);
+			mLastPopCards.clear();
+			mLastPopCards.addAll(mLeftPopCards);
+			mLastPopIndex = INDEX_OF_LEFT;
+		}
 	}
 	private void getLeftPopCards()
 	{
-		int size = mLeftCards.size();
-		mLeftPopCards.add(mLeftCards.get(0));
-		mLeftPopCards.add(mLeftCards.get(size - 1));
-		mLeftCards.remove(size - 1);
-		mLeftCards.remove(0);
+		mGameAI.getAIPopCards(mLastPopType, mLastPopCards, mLeftCards, mLeftPopCards);
 	}
 	private void setLeftPopCardsPosition()
 	{
@@ -405,19 +480,25 @@ public class GameView extends View{
 	}
 	private void getRightPopCards()
 	{
-		int size = mRightCards.size();
-		mRightPopCards.add(mRightCards.get(0));
-		mRightPopCards.add(mRightCards.get(size - 1));
-		mRightCards.remove(size - 1);
-		mRightCards.remove(0);
+		mGameAI.getAIPopCards(mLastPopType, mLastPopCards, mRightCards, mRightPopCards);
 	}
 	private void handleRightTurn()
 	{
+		mRightPopCards.clear();
+		if(mLastPopIndex == INDEX_OF_RIGHT){
+			mLastPopType = CombinationType.NEWROUND;
+		}
 		getRightPopCards();
 		setRightPopCardsPosition();
 		setRightCardsPosition();
 		mNeedShowPopCards = true;
 		invalidate();
+		if(GameLogic.getCardsType(mRightPopCards) != CombinationType.NONE){
+			mLastPopType = GameLogic.getCardsType(mRightPopCards);
+			mLastPopCards.clear();
+			mLastPopCards.addAll(mRightPopCards);
+			mLastPopIndex = INDEX_OF_RIGHT;
+		}
 	}
 	
 	private void setRightPopCardsPosition()
