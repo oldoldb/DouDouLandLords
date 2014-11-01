@@ -6,14 +6,24 @@ import java.util.List;
 public class GameLogic {
 
 	public enum CombinationType{
-		NEWROUND,NONE,ONE,TWO,THREE,FOUR,THREE_WITH_ONE,THREE_WITH_TWO,FOUR_WITH_TWO,SINGLE_STRAIGHT;
+		NEWROUND,NONE,ONE,TWO,THREE,FOUR,THREE_WITH_ONE,THREE_WITH_TWO,FOUR_WITH_TWO,SINGLE_STRAIGHT,DOUBLE_STRAIGHT,KING_KILLER;
 	}
 	public static boolean isMeetLogic(CombinationType lastType, List<Card> lastCards, List<Card> selectedCards)
 	{
 		boolean flag = false;
 		CombinationType type = getCardsType(selectedCards);
-		if(lastType != CombinationType.NONE && lastType != CombinationType.NEWROUND && lastType != type){
-			return false;
+		if(lastType != CombinationType.NONE && lastType != CombinationType.NEWROUND && type != lastType){
+			if(lastType == CombinationType.FOUR){
+				if(type == CombinationType.KING_KILLER){
+					return true;
+				} else {
+					return false;
+				}
+			} else if(lastType == CombinationType.KING_KILLER){
+				return false;
+			} else if(type == CombinationType.FOUR || type == CombinationType.KING_KILLER){
+				return true;
+			}
 		}
 		if((lastType == CombinationType.NONE || lastType == CombinationType.NEWROUND) && type != CombinationType.NONE){
 			return true;
@@ -40,6 +50,12 @@ public class GameLogic {
 		case SINGLE_STRAIGHT:
 			flag = selectedCards.size() == lastCards.size() && selectedCards.get(0).getCardType().getValue() > lastCards.get(0).getCardType().getValue();
 			break;
+		case DOUBLE_STRAIGHT:
+			flag = selectedCards.size() == lastCards.size() && selectedCards.get(0).getCardType().getValue() > lastCards.get(0).getCardType().getValue();
+			break;
+		case KING_KILLER:
+			flag = true;
+			break;
 		default:
 			break;
 		}
@@ -57,7 +73,9 @@ public class GameLogic {
 		case 2:
 			if(hasSameTwo(selectedCards)){
 				type = CombinationType.TWO;
-			} 
+			} else if(isKingKiller(selectedCards)){
+				type = CombinationType.KING_KILLER;
+			}
 			break;
 		case 3:
 			if(hasSameThree(selectedCards)){
@@ -87,6 +105,8 @@ public class GameLogic {
 		if(type == CombinationType.NONE){
 			if(isSingleStraight(selectedCards)){
 				type = CombinationType.SINGLE_STRAIGHT;
+			} else if(isDoubleStraight(selectedCards)){
+				type = CombinationType.DOUBLE_STRAIGHT;
 			}
 		}
 		return type;
@@ -150,5 +170,34 @@ public class GameLogic {
 			}
 		}
 		return true;
+	}
+	
+	public static boolean isDoubleStraight(List<Card> selectedCards)
+	{
+		int size = selectedCards.size();
+		if(size % 2 == 1 || size < 6 || size > 20){
+			return false;
+		}
+		Collections.sort(selectedCards);
+		for(int i=0;i<size-2;i+=2){
+			if(selectedCards.get(i).getCardType().getValue() != selectedCards.get(i+1).getCardType().getValue()
+					|| selectedCards.get(i).getCardType().getValue() + 1 != selectedCards.get(i+2).getCardType().getValue()){
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	public static boolean isKingKiller(List<Card> selectedCards)
+	{
+		int size = selectedCards.size();
+		if(size != 2){
+			return false;
+		}
+		Collections.sort(selectedCards);
+		if(selectedCards.get(0).getCardType().getValue() == 16 && selectedCards.get(1).getCardType().getValue() == 17){
+			return true;
+		}
+		return false;
 	}
 }

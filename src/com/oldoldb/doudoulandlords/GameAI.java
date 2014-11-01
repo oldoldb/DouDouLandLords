@@ -2,12 +2,7 @@ package com.oldoldb.doudoulandlords;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-
-import android.R.integer;
-import android.util.SparseArray;
-
 import com.oldoldb.doudoulandlords.GameLogic.CombinationType;
 
 public class GameAI {
@@ -63,6 +58,11 @@ public class GameAI {
 			break;
 		case SINGLE_STRAIGHT:
 			getAIPopCardsForTypeSINGLESTRAIGHT(lastCards, cards, popCards);
+			break;
+		case DOUBLE_STRAIGHT:
+			getAIPopCardsForTypeDOUBLESTRAIGHT(lastCards, cards, popCards);
+			break;
+		case KING_KILLER:
 			break;
 		default:
 			break;
@@ -143,13 +143,13 @@ public class GameAI {
 	}
 	private void getAIPopCardsForTypeTHREEWITHONE(List<Card> lastCards, List<Card> cards, List<Card> popCards)
 	{
-		int last = lastCards.get(0).getCardType().getValue();
+		int last = lastCards.get(2).getCardType().getValue();
 		int size = cards.size();
 		List<Card> tempCards = new ArrayList<Card>();
 		for(int i=0;i<size-3;i++){
 			tempCards = getRangeList(cards, i, i+3);
 			if(GameLogic.hasThreeWithOne(tempCards)){
-				if(tempCards.get(0).getCardType().getValue() > last){
+				if(tempCards.get(2).getCardType().getValue() > last){
 					popCards.addAll(tempCards);
 					cards.remove(i);
 					cards.remove(i);
@@ -162,13 +162,13 @@ public class GameAI {
 	}
 	private void getAIPopCardsForTypeTHREEWITHTWO(List<Card> lastCards, List<Card> cards, List<Card> popCards)
 	{
-		int last = lastCards.get(0).getCardType().getValue();
+		int last = lastCards.get(2).getCardType().getValue();
 		int size = cards.size();
 		List<Card> tempCards = new ArrayList<Card>();
 		for(int i=0;i<size-4;i++){
 			tempCards = getRangeList(cards, i, i+4);
 			if(GameLogic.hasThreeWithTwo(tempCards)){
-				if(tempCards.get(0).getCardType().getValue() > last){
+				if(tempCards.get(2).getCardType().getValue() > last){
 					popCards.addAll(tempCards);
 					cards.remove(i);
 					cards.remove(i);
@@ -182,13 +182,13 @@ public class GameAI {
 	}
 	private void getAIPopCardsForTypeFOURWITHTWO(List<Card> lastCards, List<Card> cards, List<Card> popCards)
 	{
-		int last = lastCards.get(0).getCardType().getValue();
+		int last = lastCards.get(2).getCardType().getValue();
 		int size = cards.size();
 		List<Card> tempCards = new ArrayList<Card>();
 		for(int i=0;i<size-5;i++){
 			tempCards = getRangeList(cards, i, i+5);
 			if(GameLogic.hasFourWithTwo(tempCards)){
-				if(tempCards.get(0).getCardType().getValue() > last){
+				if(tempCards.get(2).getCardType().getValue() > last){
 					popCards.addAll(tempCards);
 					cards.remove(i);
 					cards.remove(i);
@@ -201,9 +201,79 @@ public class GameAI {
 			}
 		}
 	}
+	private int findTargetIndex(List<Card> cards, int target, int start)
+	{
+		int size = cards.size();
+		for(int i=start;i<size;i++){
+			Card card = cards.get(i);
+			if(card.getCardType().getValue() == target){
+				return i;
+			}
+		}
+		return -1;
+	}
 	private void getAIPopCardsForTypeSINGLESTRAIGHT(List<Card> lastCards, List<Card> cards, List<Card> popCards)
 	{
-		
+		int num = lastCards.size();
+		int prev = lastCards.get(0).getCardType().getValue();
+		int start = prev + 1;
+		int end = 15 - num;
+		Collections.sort(cards);
+		for(int i=start;i<=end;i++){
+			List<Integer> res = new ArrayList<Integer>();
+			for(int j=0;j<num;j++){
+				int index = findTargetIndex(cards, i + j, 0);
+				if(index == -1){
+					break;
+				} else {
+					res.add(index);
+				}
+			}
+			if(res.size() < num){
+				res.clear();
+			} else {
+				getPopCardsFromIndexList(cards, popCards, res);
+				break;
+			}
+		}
+	}
+	private void getPopCardsFromIndexList(List<Card> cards, List<Card> popCards, List<Integer> indexList)
+	{
+		int size = indexList.size();
+		for(int i=size-1;i>=0;i--){
+			popCards.add(0, cards.get(indexList.get(i)));
+			cards.remove(indexList.get(i).intValue());
+		}
+	}
+	private void getAIPopCardsForTypeDOUBLESTRAIGHT(List<Card> lastCards, List<Card> cards, List<Card> popCards)
+	{
+		int num = lastCards.size();
+		int prev = lastCards.get(0).getCardType().getValue();
+		int start = prev + 1;
+		int end = 15 - num / 2;
+		Collections.sort(cards);
+		for(int i=start;i<=end;i++){
+			List<Integer> res = new ArrayList<Integer>();
+			for(int j=0;j<num;j++){
+				int index;
+				if(j % 2 == 1){
+					index = findTargetIndex(cards, i + j / 2, res.get(res.size() - 1) + 1);
+				} else {
+					index = findTargetIndex(cards, i + j / 2, 0);
+				}
+				if(index == -1){
+					break;
+				} else {
+					res.add(index);
+				}
+			}
+			if(res.size() < num){
+				res.clear();
+			} else {
+				getPopCardsFromIndexList(cards, popCards, res);
+				break;
+			}
+		}
 	}
 	private List<Card> getRangeList(List<Card> cards, int start, int end)
 	{

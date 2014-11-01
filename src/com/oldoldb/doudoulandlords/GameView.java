@@ -3,13 +3,8 @@ package com.oldoldb.doudoulandlords;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
-
 import com.oldoldb.doudoulandlords.CardColor.Color;
 import com.oldoldb.doudoulandlords.GameLogic.CombinationType;
-
-import android.R.integer;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -17,11 +12,7 @@ import android.content.pm.ApplicationInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Rect;
-import android.inputmethodservice.Keyboard;
 import android.os.CountDownTimer;
-import android.util.DisplayMetrics;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -69,7 +60,6 @@ public class GameView extends View{
 	private boolean mNeedShowAction = false;
 	private boolean mNeedShowPopCards = false;
 	private GameAI mGameAI;
-	private boolean mStartNewRound = true;
 	private int mLastPopIndex;
 	private GameLogic.CombinationType mLastPopType = CombinationType.NEWROUND;
 	public GameView(Context context, int width, int height) {
@@ -456,6 +446,11 @@ public class GameView extends View{
 		setLeftCardsPosition();
 		mNeedShowPopCards = true;
 		invalidate();
+		if(isGameOver()){
+			initStateForNewGame();
+			startNewGame();
+			return ;
+		}
 		if(GameLogic.getCardsType(mLeftPopCards) != CombinationType.NONE){
 			mLastPopType = GameLogic.getCardsType(mLeftPopCards);
 			mLastPopCards.clear();
@@ -493,6 +488,11 @@ public class GameView extends View{
 		setRightCardsPosition();
 		mNeedShowPopCards = true;
 		invalidate();
+		if(isGameOver()){
+			initStateForNewGame();
+			startNewGame();
+			return ;
+		}
 		if(GameLogic.getCardsType(mRightPopCards) != CombinationType.NONE){
 			mLastPopType = GameLogic.getCardsType(mRightPopCards);
 			mLastPopCards.clear();
