@@ -2,6 +2,7 @@ package com.oldoldb.doudoulandlords;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 public class GameLogic {
 
@@ -199,5 +200,29 @@ public class GameLogic {
 			return true;
 		}
 		return false;
+	}
+	
+	public static boolean isGameOver(List<Card> playerCards, List<Card> leftCards, List<Card> rightCards)
+	{
+		return playerCards.isEmpty() || leftCards.isEmpty() || rightCards.isEmpty();
+	}
+	
+	public static void shuffleCards(List<Card> allCards)
+	{
+		int size = allCards.size();
+		Random random = new Random();
+		for(int i=1;i<size;i++){
+			int index = random.nextInt(i+1);
+			if(index != i){
+				Collections.swap(allCards, index, i);
+			}
+		}
+	}
+	
+	public static void sortCards(List<Card> playerCards, List<Card> leftCards, List<Card> rightCards)
+	{
+		Collections.sort(playerCards);
+		Collections.sort(leftCards);
+		Collections.sort(rightCards);
 	}
 }
