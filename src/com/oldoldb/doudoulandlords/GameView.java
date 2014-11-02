@@ -79,6 +79,10 @@ public class GameView extends View{
 	private CountDownTimer mDispatchCountDownTimer;
 	private GameLogic.CombinationType mLastPopType = CombinationType.NEWROUND;
 	
+	public GameView(Context context)
+	{
+		super(context);
+	}
 	
 	public GameView(Context context, int width, int height) {
 		super(context);
