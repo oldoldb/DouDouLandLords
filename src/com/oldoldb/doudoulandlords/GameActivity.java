@@ -17,7 +17,7 @@ public class GameActivity extends Activity {
 		getWindowManager().getDefaultDisplay().getMetrics(dm);
 		mGameView = new GameView(this, dm.widthPixels, dm.heightPixels);
 		setContentView(mGameView);
-		mGameView.showDialog();
+		mGameView.startNewGame();
 	}
 
 	

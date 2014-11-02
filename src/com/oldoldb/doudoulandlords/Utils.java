@@ -14,26 +14,33 @@ public class Utils {
 		return x>=l && x<=r && y>=t && y<=b;
 	}
 	
-	public static void drawCard(Card card, Canvas canvas)
+	public static void drawCard(Card card, Canvas canvas, boolean isBack)
 	{
-		canvas.drawBitmap(card.getBitmap(), card.getX(), card.getY(), null);
+		if(isBack){
+			drawCardBack(card, canvas);
+		} else {
+			canvas.drawBitmap(card.getBitmap(), card.getX(), card.getY(), null);
+		}
 	}
-	
+	public static void drawCardBack(Card card , Canvas canvas)
+	{
+		canvas.drawBitmap(card.getBackBitmap(), card.getX(), card.getY(), null);
+	}
 	public static void drawAction(BaseAction baseAction, Canvas canvas)
 	{
 		canvas.drawBitmap(baseAction.getBitmap(), baseAction.getX(), baseAction.getY(), null);
 	}
-	public static void drawCards(List<Card> cards, Canvas canvas)
+	public static void drawCards(List<Card> cards, Canvas canvas, boolean isBack)
 	{
 		for(Card card : cards){
-			drawCard(card, canvas);
+			drawCard(card, canvas, isBack);
 		}
 	}
 	
-	public static void drawCardsInRange(List<Card> cards, Canvas canvas, int range)
+	public static void drawCardsInRange(List<Card> cards, Canvas canvas, int range, boolean isBack)
 	{
 		for(int i=0;i<range;i++){
-			drawCard(cards.get(i), canvas);
+			drawCard(cards.get(i), canvas, isBack);
 		}
 	}
 	

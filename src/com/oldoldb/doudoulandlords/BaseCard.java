@@ -7,6 +7,13 @@ import android.graphics.Bitmap;
 public class BaseCard implements Comparable<BaseCard>{
 
 	protected Bitmap bitmap;
+	protected Bitmap backBitmap;
+	public Bitmap getBackBitmap() {
+		return backBitmap;
+	}
+	public void setBackBitmap(Bitmap backBitmap) {
+		this.backBitmap = backBitmap;
+	}
 	protected CardType cardType;
 	protected int sortValue;
 	public int getSortValue() {
@@ -28,9 +35,10 @@ public class BaseCard implements Comparable<BaseCard>{
 		this.cardType = cardType;
 	}
 	
-	public BaseCard(Bitmap bitmap, CardType cardType)
+	public BaseCard(Bitmap bitmap, Bitmap backBitmap, CardType cardType)
 	{
 		this.bitmap = bitmap;
+		this.backBitmap = backBitmap;
 		this.cardType = cardType;
 		this.sortValue = calculateSortValue(cardType);
 	}

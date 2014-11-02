@@ -3,11 +3,8 @@ package com.oldoldb.doudoulandlords;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import com.oldoldb.doudoulandlords.CardColor.Color;
-import com.oldoldb.doudoulandlords.GameLogic.CombinationType;
-import android.app.AlertDialog;
+
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.pm.ApplicationInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -15,6 +12,9 @@ import android.graphics.Canvas;
 import android.os.CountDownTimer;
 import android.view.MotionEvent;
 import android.view.View;
+
+import com.oldoldb.doudoulandlords.CardColor.Color;
+import com.oldoldb.doudoulandlords.GameLogic.CombinationType;
 
 public class GameView extends View{
 
@@ -54,13 +54,26 @@ public class GameView extends View{
 	private int mCardHeight;
 	private int mActionWidth;
 	private int mActionHeight;
-	private BaseAction mYesAction;
-	private BaseAction mNoAction;
-	private BaseAction mNoteAction;
+	private int mPlayerDisableActionWidth;
+	private int mPlayerDisableActionHeight;
+	private int mAIDisableActionWidth;
+	private int mAIDisableActionHeight;
+	private UserAction mYesAction;
+	private UserAction mNoAction;
+	private UserAction mNoteAction;
+	private BaseAction mPlayerDisableAction;
+	private BaseAction mLeftDisableAction;
+	private BaseAction mRightDisableAction;
 	private boolean mNeedShowAction = false;
+	private boolean mNeedShowPlayerDisableAction = false;
+	private boolean mNeedShowLeftDisableAction = false;
+	private boolean mNeedShowRightDisableAction = false;
 	private boolean mNeedShowPopCards = false;
 	private GameAI mGameAI;
 	private int mLastPopIndex;
+	private boolean mStartNewGame = true;
+	private CountDownTimer mAITurnCountDownTimer;
+	private CountDownTimer mDispatchCountDownTimer;
 	private GameLogic.CombinationType mLastPopType = CombinationType.NEWROUND;
 	public GameView(Context context, int width, int height) {
 		super(context);
@@ -79,11 +92,14 @@ public class GameView extends View{
 				String temp = name + j;
 				ApplicationInfo applicationInfo = getContext().getApplicationInfo();
 				int id = getResources().getIdentifier(temp, "drawable", applicationInfo.packageName);
-				mAllCards.add(new Card(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), id), mCardWidth, mCardHeight), new CardType(Color.values()[i], j)));
+				mAllCards.add(new Card(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), id), mCardWidth, mCardHeight), 
+						Utils.getTargetSizeBitmap(mBackCardBitmap, mCardWidth, mCardHeight),new CardType(Color.values()[i], j)));
 			}
 		}
-		mAllCards.add(new Card(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.a5_16), mCardWidth, mCardHeight), new CardType(Color.None, VALUE_OF_BLACK_JOKER)));
-		mAllCards.add(new Card(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.a5_17), mCardWidth, mCardHeight), new CardType(Color.None, VALUE_OF_RED_JOKER)));
+		mAllCards.add(new Card(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.a5_16), mCardWidth, mCardHeight),
+				Utils.getTargetSizeBitmap(mBackCardBitmap, mCardWidth, mCardHeight), new CardType(Color.None, VALUE_OF_BLACK_JOKER)));
+		mAllCards.add(new Card(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.a5_17), mCardWidth, mCardHeight), 
+				Utils.getTargetSizeBitmap(mBackCardBitmap, mCardWidth, mCardHeight),new CardType(Color.None, VALUE_OF_RED_JOKER)));
 	}
 
 	private void initStateForNewGame()
@@ -91,6 +107,9 @@ public class GameView extends View{
 		mIndexOfDispatchCard = 0;
 		mIndexOfDispatchLeftCard = 0;
 		mIndexOfDispatchRightCard = 0;
+		mNeedShowPlayerDisableAction = false;
+		mNeedShowLeftDisableAction = false;
+		mNeedShowRightDisableAction = false;
 		mPlayerCards.clear();
 		mLeftCards.clear();
 		mRightCards.clear();
@@ -110,6 +129,10 @@ public class GameView extends View{
 		mCardHeight = Math.min(mDisplayHeight / 6, mDisplayHeight * 2 / 27);
 		mActionWidth = mDisplayWidth / 9;
 		mActionHeight = mDisplayHeight / 9;
+		mPlayerDisableActionWidth = mDisplayWidth / 9;
+		mPlayerDisableActionHeight = mDisplayHeight / 9;
+		mAIDisableActionWidth = mDisplayHeight / 9;
+		mAIDisableActionHeight = mDisplayWidth / 6;
 		mAllCards = new ArrayList<Card>();
 		mPlayerPopCards = new ArrayList<Card>();
 		mLeftPopCards = new ArrayList<Card>();
@@ -124,27 +147,15 @@ public class GameView extends View{
 		mLastPopIndex = INDEX_OF_PLAYER;
 		mGameAI = GameAI.getInstance();
 	}
-	public void showDialog()
-	{
-		new AlertDialog.Builder(getContext())
-		.setTitle("Start New Game")
-		.setPositiveButton("Go", new DialogInterface.OnClickListener() {
-			
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				// TODO Auto-generated method stub
-				startNewGame();
-			}
-		}).show();
-	}
 	private void clearCardsState()
 	{
 		for(Card card : mAllCards){
 			card.setSelected(false);
 		}
 	}
-	private void startNewGame()
+	public void startNewGame()
 	{
+		mStartNewGame = true;
 		setActionPosition();
 		shuffleCards();
 		fillInEachPlayer();
@@ -162,9 +173,12 @@ public class GameView extends View{
 	}
 	private void initActions()
 	{
-		mYesAction = new BaseAction(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_yes), mActionWidth, mActionHeight));
-		mNoAction = new BaseAction(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_no), mActionWidth, mActionHeight));
-		mNoteAction = new BaseAction(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_note), mActionWidth, mActionHeight));
+		mYesAction = new UserAction(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_yes), mActionWidth, mActionHeight));
+		mNoAction = new UserAction(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_no), mActionWidth, mActionHeight));
+		mNoteAction = new UserAction(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_note), mActionWidth, mActionHeight));
+		mPlayerDisableAction = new BaseAction(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.disable_player), mPlayerDisableActionWidth, mPlayerDisableActionHeight));
+		mLeftDisableAction =  new BaseAction(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.disable_ai), mAIDisableActionWidth, mAIDisableActionHeight));
+		mRightDisableAction =  new BaseAction(Utils.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.disable_ai), mAIDisableActionWidth, mAIDisableActionHeight));
 	}
 	private void initBitmaps()
 	{
@@ -175,7 +189,12 @@ public class GameView extends View{
 	public void dispatchCards(int sum)
 	{
 		mNeedDispatchCards = true;
-		new CountDownTimer(DISPATCH_INTERVAL_TIME * (sum + 2), DISPATCH_INTERVAL_TIME) {
+		initDispatchTimer(sum);
+		mDispatchCountDownTimer.start();
+	}
+	private void initDispatchTimer(int sum)
+	{
+		mDispatchCountDownTimer = new CountDownTimer(DISPATCH_INTERVAL_TIME * (sum + 2), DISPATCH_INTERVAL_TIME) {
 			
 			@Override
 			public void onTick(long millisUntilFinished) {
@@ -190,8 +209,9 @@ public class GameView extends View{
 				mNeedDispatchCards = false;
 				mNeedShowAction = true;
 				invalidate();
+				mStartNewGame = false;
 			}
-		}.start();
+		};
 	}
 	@Override
 	protected void onDraw(Canvas canvas) {
@@ -215,6 +235,15 @@ public class GameView extends View{
 		if(mNeedShowPopCards){
 			drawPopCards(canvas);
 		}
+		if(mNeedShowPlayerDisableAction){
+			drawDisableAction(mPlayerDisableAction, canvas);
+		}
+		if(mNeedShowLeftDisableAction){
+			drawDisableAction(mLeftDisableAction, canvas);
+		}
+		if(mNeedShowRightDisableAction){
+			drawDisableAction(mRightDisableAction, canvas);
+		}
 	}
 	
 	private boolean isGameOver()
@@ -222,11 +251,15 @@ public class GameView extends View{
 		return mPlayerCards.isEmpty() || mLeftCards.isEmpty() || mRightCards.isEmpty();
 	}
 
+	private void drawDisableAction(BaseAction action, Canvas canvas)
+	{
+		Utils.drawAction(action, canvas);
+	}
 	private void drawPopCards(Canvas canvas)
 	{
-		Utils.drawCards(mPlayerPopCards, canvas);
-		Utils.drawCards(mLeftPopCards, canvas);
-		Utils.drawCards(mRightPopCards, canvas);
+		Utils.drawCards(mPlayerPopCards, canvas, false);
+		Utils.drawCards(mLeftPopCards, canvas, false);
+		Utils.drawCards(mRightPopCards, canvas, false);
 	}
 	private void drawAction(Canvas canvas)
 	{
@@ -236,17 +269,17 @@ public class GameView extends View{
 	}
 	private void drawPlayerCards(int range, Canvas canvas)
 	{
-		Utils.drawCardsInRange(mPlayerCards, canvas, range);
+		Utils.drawCardsInRange(mPlayerCards, canvas, range, false);
 	}
 	
 	private void drawLeftCards(int range, Canvas canvas)
 	{
-		Utils.drawCardsInRange(mLeftCards, canvas, range);
+		Utils.drawCardsInRange(mLeftCards, canvas, range, true);
 	}
 	
 	private void drawRightCards(int range, Canvas canvas)
 	{
-		Utils.drawCardsInRange(mRightCards, canvas, range);
+		Utils.drawCardsInRange(mRightCards, canvas, range, true);
 	}
 	private void drawBackground(Canvas canvas)
 	{
@@ -314,6 +347,9 @@ public class GameView extends View{
 		mNoteAction.setY(middleY);
 		mNoAction.setX(middleX - mNoAction.getWidth() * 3 / 2);
 		mNoAction.setY(middleY);
+		setPlayerDisablePosition();
+		setLeftDisablePosition();
+		setRightDisablePosition();
 	}
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
@@ -349,20 +385,31 @@ public class GameView extends View{
 	private void handleTouchActionEvent(int index)
 	{
 		if(index == INDEX_OF_NO){
-			restoreTouchCards();
-			mPlayerPopCards.clear();
+			if(mLastPopIndex != INDEX_OF_PLAYER){
+				restoreTouchCards();
+				mNeedShowPlayerDisableAction = true;
+				invalidate();
+				mPlayerPopCards.clear();
+				initAITurn();
+				inAITurn();
+			}
 		} else if(index == INDEX_OF_YES){
 			List<Card> selectedCards = getSelectedCards();
+			if(selectedCards.size() == 0){
+				return ;
+			}
 			if(GameLogic.isMeetLogic(mLastPopType, mLastPopCards, selectedCards) || mLastPopIndex == INDEX_OF_PLAYER){
 				popSelectedCards();
 				mLastPopIndex = INDEX_OF_PLAYER;
+				initAITurn();
+				inAITurn();
 			} else{
 				restoreTouchCards();
 				invalidate();
 			}
 		}
-		inAITurn();
 	}
+	
 	private List<Card> getSelectedCards()
 	{
 		List<Card> selectedCards = new ArrayList<Card>();
@@ -391,8 +438,10 @@ public class GameView extends View{
 		setPlayerPopCardsPosition();
 		setPlayerCardsPosition();
 		mNeedShowPopCards = true;
+		mNeedShowPlayerDisableAction = false;
 		invalidate();
 		if(isGameOver()){
+			cancelAITurn();
 			initStateForNewGame();
 			startNewGame();
 			return ;
@@ -404,9 +453,9 @@ public class GameView extends View{
 		}
 	}
 	
-	private void inAITurn()
+	private void initAITurn()
 	{
-		new CountDownTimer(WAIT_AI_TIME, WAIT_AI_TIME) {
+		mAITurnCountDownTimer = new CountDownTimer(WAIT_AI_TIME, WAIT_AI_TIME) {
 			
 			@Override
 			public void onTick(long millisUntilFinished) {
@@ -417,6 +466,9 @@ public class GameView extends View{
 			@Override
 			public void onFinish() {
 				// TODO Auto-generated method stub
+				if(mStartNewGame){
+					return ;
+				}
 				handleRightTurn();
 				new CountDownTimer(WAIT_AI_TIME, WAIT_AI_TIME) {
 					
@@ -433,7 +485,15 @@ public class GameView extends View{
 					}
 				}.start();
 			}
-		}.start();
+		};
+	}
+	private void inAITurn()
+	{
+		mAITurnCountDownTimer.start();
+	}
+	private void cancelAITurn()
+	{
+		mAITurnCountDownTimer.cancel();
 	}
 	private void handleLeftTurn()
 	{
@@ -445,8 +505,14 @@ public class GameView extends View{
 		setLeftPopCardsPosition();
 		setLeftCardsPosition();
 		mNeedShowPopCards = true;
+		if(mLeftPopCards.size() == 0){
+			mNeedShowLeftDisableAction = true;
+		} else {
+			mNeedShowLeftDisableAction = false;
+		}
 		invalidate();
 		if(isGameOver()){
+			cancelAITurn();
 			initStateForNewGame();
 			startNewGame();
 			return ;
@@ -487,8 +553,14 @@ public class GameView extends View{
 		setRightPopCardsPosition();
 		setRightCardsPosition();
 		mNeedShowPopCards = true;
+		if(mRightPopCards.size() == 0){
+			mNeedShowRightDisableAction = true;
+		} else {
+			mNeedShowRightDisableAction = false;
+		}
 		invalidate();
 		if(isGameOver()){
+			cancelAITurn();
 			initStateForNewGame();
 			startNewGame();
 			return ;
@@ -581,6 +653,27 @@ public class GameView extends View{
 				card.setY(card.getY() + card.getHeight() / 2);
 			}
 		}
-		invalidate();
+	}
+	
+	private void setPlayerDisablePosition()
+	{
+		int startX = (mDisplayWidth - mPlayerDisableActionWidth) / 2;
+		int startY = mDisplayHeight - 4 * mCardHeight;
+		mPlayerDisableAction.setX(startX);
+		mPlayerDisableAction.setY(startY);
+	}
+	private void setLeftDisablePosition()
+	{
+		int startX = 3 * mCardWidth;
+		int startY = (mDisplayHeight - mAIDisableActionHeight) / 2;
+		mLeftDisableAction.setX(startX);
+		mLeftDisableAction.setY(startY);
+	}
+	private void setRightDisablePosition()
+	{
+		int startX = (mDisplayWidth - 4 * mCardWidth);
+		int startY = (mDisplayHeight - mAIDisableActionHeight) / 2;
+		mRightDisableAction.setX(startX);
+		mRightDisableAction.setY(startY);
 	}
 }

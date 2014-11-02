@@ -1,6 +1,5 @@
 package com.oldoldb.doudoulandlords;
 
-import android.R.id;
 import android.graphics.Bitmap;
 
 public class Card extends BaseCard{
@@ -42,9 +41,9 @@ public class Card extends BaseCard{
 		this.height = height;
 	}
 	
-	public Card(Bitmap bitmap, CardType cardType)
+	public Card(Bitmap bitmap, Bitmap backBitmap, CardType cardType)
 	{
-		super(bitmap, cardType);
+		super(bitmap, backBitmap, cardType);
 		this.width = bitmap.getWidth();
 		this.height = bitmap.getHeight();
 	}

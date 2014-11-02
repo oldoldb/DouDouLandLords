@@ -1,6 +1,5 @@
 package com.oldoldb.doudoulandlords;
 
-import java.net.ContentHandler;
 
 import android.content.Context;
 import android.util.Log;

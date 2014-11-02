@@ -1,14 +1,12 @@
 package com.oldoldb.doudoulandlords;
 
-import android.R.bool;
 import android.graphics.Bitmap;
 
 public class BaseAction {
-
-	private Bitmap bitmap;
-	private int x;
-	private int y;
-	private int width;
+	protected Bitmap bitmap;
+	protected int x;
+	protected int y;
+	protected int width;
 	public int getWidth() {
 		return width;
 	}
@@ -25,7 +23,6 @@ public class BaseAction {
 		this.height = height;
 	}
 	private int height;
-	private boolean enable;
 	
 	public Bitmap getBitmap() {
 		return bitmap;
@@ -50,19 +47,10 @@ public class BaseAction {
 	public void setY(int y) {
 		this.y = y;
 	}
-
-	public boolean isEnable() {
-		return enable;
-	}
-
-	public void setEnable(boolean enable) {
-		this.enable = enable;
-	}
 	public BaseAction(Bitmap bitmap)
 	{
 		this.bitmap = bitmap;
 		this.width = bitmap.getWidth();
 		this.height = bitmap.getHeight();
-		this.enable = true;
 	}
 }
