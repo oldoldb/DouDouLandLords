@@ -2,13 +2,14 @@ package com.oldoldb.doudoulandlords;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -18,13 +19,15 @@ import com.oldoldb.doudoulandlords.GameLogic.CombinationType;
 
 public class GameView extends View{
 
+	private enum Index_Of_Current_Turn{
+		INDEX_OF_PLAYER, INDEX_OF_RIGHT, INDEX_OF_LEFT;
+	}
+	private enum Index_Of_Current_Action{
+		INDEX_OF_NO, INDEX_OF_YES, INDEX_OF_NOTE;
+	}
+	private static final int INDEX_AI_RIGHT = 1;
+	private static final int INDEX_AI_LEFT = 2;
 	private static final int INVALID_INDEX = -1;
-	private static final int INDEX_OF_PLAYER = 0;
-	private static final int INDEX_OF_RIGHT = 1;
-	private static final int INDEX_OF_LEFT = 2;
-	private static final int INDEX_OF_NO = 0;
-	private static final int INDEX_OF_YES = 1;
-	private static final int INDEX_OF_NOTE = 2;
 	private static final int DISPATCH_INTERVAL_TIME = 200;
 	private static final int WAIT_AI_TIME = 1000;
 	private static final int COLOR_NUM = 4;
@@ -35,20 +38,33 @@ public class GameView extends View{
 	private static final int VALUE_OF_BLACK_JOKER = 16;
 	private static final int VALUE_OF_RED_JOKER = 17;
 	
-	private Bitmap mBackCardBitmap;
-	private Bitmap mBackgroundBitmap;
+	/*
+	 * Need to initialize when starting a new game
+	 */
 	private boolean mNeedDispatchCards = true;
 	private int mIndexOfDispatchCard = 0;
 	private int mIndexOfDispatchLeftCard = 0;
 	private int mIndexOfDispatchRightCard = 0;
 	private List<Card> mPlayerCards;
 	private List<Card> mLeftCards;
-	private List<Card> mRightCards; 
-	private List<Card> mAllCards; 
+	private List<Card> mRightCards;
 	private List<Card> mPlayerPopCards;
 	private List<Card> mLeftPopCards;
 	private List<Card> mRightPopCards; 
 	private List<Card> mLastPopCards; 
+	private boolean mNeedShowAction = false;
+	private boolean mNeedShowPlayerDisableAction = false;
+	private boolean mNeedShowLeftDisableAction = false;
+	private boolean mNeedShowRightDisableAction = false;
+	private boolean mNeedShowPopCards = false;
+	private int mLastPopIndex;
+	private int mIndexOfCurrentTurn;
+	private boolean mStartNewGame = true;
+	private GameLogic.CombinationType mLastPopType = CombinationType.NEWROUND;
+	
+	private Bitmap mBackCardBitmap;
+	private Bitmap mBackgroundBitmap;
+	private List<Card> mAllCards; 
 	private int mDisplayWidth;
 	private int mDisplayHeight;
 	private int mCardWidth;
@@ -65,19 +81,11 @@ public class GameView extends View{
 	private BaseAction mPlayerDisableAction;
 	private BaseAction mLeftDisableAction;
 	private BaseAction mRightDisableAction;
-	private boolean mNeedShowAction = false;
-	private boolean mNeedShowPlayerDisableAction = false;
-	private boolean mNeedShowLeftDisableAction = false;
-	private boolean mNeedShowRightDisableAction = false;
-	private boolean mNeedShowPopCards = false;
 	private GameAI mGameAI;
 	private DrawTool mDrawTool;
-	private int mLastPopIndex;
-	private int mIndexOfCurrentTurn;
-	private boolean mStartNewGame = true;
-	private CountDownTimer mAITurnCountDownTimer;
 	private CountDownTimer mDispatchCountDownTimer;
-	private GameLogic.CombinationType mLastPopType = CombinationType.NEWROUND;
+	private Handler mHandler;
+	
 	
 	public GameView(Context context)
 	{
@@ -119,6 +127,10 @@ public class GameView extends View{
 		mNeedShowPlayerDisableAction = false;
 		mNeedShowLeftDisableAction = false;
 		mNeedShowRightDisableAction = false;
+		mNeedShowAction = false;
+		mNeedShowPopCards = false;
+		mNeedDispatchCards = true;
+		mStartNewGame = true;
 		mPlayerCards.clear();
 		mLeftCards.clear();
 		mRightCards.clear();
@@ -127,8 +139,8 @@ public class GameView extends View{
 		mRightPopCards.clear();
 		mLastPopCards.clear();
 		mLastPopType = CombinationType.NEWROUND;
-		mLastPopIndex = INDEX_OF_PLAYER;
-		mIndexOfCurrentTurn = INDEX_OF_PLAYER;
+		mLastPopIndex = Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal();
+		mIndexOfCurrentTurn = Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal();
 		initCardsState();
 	}
 	private void initVariables(int width, int height)
@@ -154,15 +166,18 @@ public class GameView extends View{
 		mIndexOfDispatchCard = 0;
 		mIndexOfDispatchLeftCard = 0;
 		mIndexOfDispatchRightCard = 0;
-		mLastPopIndex = INDEX_OF_PLAYER;
-		mIndexOfCurrentTurn = INDEX_OF_PLAYER;
+		mLastPopIndex = Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal();
+		mIndexOfCurrentTurn = Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal();
 		mGameAI = GameAI.getInstance();
 		mDrawTool = DrawTool.getInstance();
 	}
 	private void initCardsState()
 	{
 		for(Card card : mAllCards){
-			card.setSelected(false);
+			if(card.isSelected()){
+				card.setSelected(false);
+				card.setY(card.getY() + card.getHeight() / 2);
+			}
 		}
 	}
 	private void initActions()
@@ -204,36 +219,32 @@ public class GameView extends View{
 	}
 	private void initAITurn()
 	{
-		mAITurnCountDownTimer = new CountDownTimer(WAIT_AI_TIME, WAIT_AI_TIME) {
-			
+		mHandler = new Handler(){
+
 			@Override
-			public void onTick(long millisUntilFinished) {
+			public void handleMessage(Message msg) {
 				// TODO Auto-generated method stub
-				
-			}
-			
-			@Override
-			public void onFinish() {
-				// TODO Auto-generated method stub
-				if(mStartNewGame){
-					return ;
+				switch (msg.what) {
+				case INDEX_AI_RIGHT:
+					if(mStartNewGame){
+						break;
+					}
+					handleRightTurn();
+					Message message = Message.obtain();
+					message.what = INDEX_AI_LEFT;
+					mHandler.sendMessageDelayed(message, WAIT_AI_TIME);
+					break;
+				case INDEX_AI_LEFT:
+					if(mStartNewGame){
+						break;
+					}
+					handleLeftTurn();
+					break;
+				default:
+					break;
 				}
-				handleRightTurn();
-				new CountDownTimer(WAIT_AI_TIME, WAIT_AI_TIME) {
-					
-					@Override
-					public void onTick(long millisUntilFinished) {
-						// TODO Auto-generated method stub
-						
-					}
-					
-					@Override
-					public void onFinish() {
-						// TODO Auto-generated method stub
-						handleLeftTurn();
-					}
-				}.start();
 			}
+			
 		};
 	}
 	public void startNewGame()
@@ -301,6 +312,7 @@ public class GameView extends View{
 		case MotionEvent.ACTION_DOWN:
 			break;
 		case MotionEvent.ACTION_UP:
+			Log.d("DOUDOU", mStartNewGame + "hehe");
 			if(!mStartNewGame){
 				handleActionUpEvent(event);
 			}
@@ -347,11 +359,11 @@ public class GameView extends View{
 		int x = (int) event.getX();
 		int y = (int) event.getY();
 		if(Utils.inTouchArea(x, y, mNoAction.getX(), mNoAction.getY(), mNoAction.getX() + mNoAction.getWidth(), mNoAction.getY() + mNoAction.getHeight())){
-			index = INDEX_OF_NO;
+			index = Index_Of_Current_Action.INDEX_OF_NO.ordinal();
 		} else if(Utils.inTouchArea(x, y, mYesAction.getX(), mYesAction.getY(), mYesAction.getX() + mYesAction.getWidth(), mYesAction.getY() + mYesAction.getHeight())){
-			index = INDEX_OF_YES;
+			index = Index_Of_Current_Action.INDEX_OF_YES.ordinal();
 		} else if(Utils.inTouchArea(x, y, mNoteAction.getX(), mNoteAction.getY(), mNoteAction.getX() + mNoteAction.getWidth(), mNoteAction.getY() + mNoteAction.getHeight())){
-			index = INDEX_OF_NOTE;
+			index = Index_Of_Current_Action.INDEX_OF_NOTE.ordinal();
 		}
 		return index;
 	}
@@ -377,7 +389,8 @@ public class GameView extends View{
 			return ;
 		} 
 		index = getTouchActionIndex(event);
-		if(index != INVALID_INDEX && mIndexOfCurrentTurn == INDEX_OF_PLAYER){
+		Log.d("DOUDOU", index + " , " + mIndexOfCurrentTurn + " , ");
+		if(index != INVALID_INDEX && mIndexOfCurrentTurn == Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal()){
 			handleTouchActionEvent(index);
 			return ;
 		}
@@ -385,32 +398,31 @@ public class GameView extends View{
 	
 	private void handleTouchActionEvent(int index)
 	{
-		if(index == INDEX_OF_NO){
-			if(mLastPopIndex != INDEX_OF_PLAYER){
+		Log.d("DOUDOU", index + "");
+		if(index == Index_Of_Current_Action.INDEX_OF_NO.ordinal()){
+			if(mLastPopIndex != Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal()){
 				restoreTouchCards();
 				mNeedShowPlayerDisableAction = true;
 				invalidate();
 				mPlayerPopCards.clear();
 				initAITurn();
-				mIndexOfCurrentTurn = INDEX_OF_RIGHT;
+				mIndexOfCurrentTurn = Index_Of_Current_Turn.INDEX_OF_RIGHT.ordinal();
 				inAITurn();
 			}
-		} else if(index == INDEX_OF_YES){
+		} else if(index == Index_Of_Current_Action.INDEX_OF_YES.ordinal()){
 			List<Card> selectedCards = getSelectedCards();
 			if(selectedCards.size() == 0){
 				return ;
 			}
-			if(GameLogic.isMeetLogic(mLastPopType, mLastPopCards, selectedCards) || mLastPopIndex == INDEX_OF_PLAYER){
+			Log.d("DOUDOU", GameLogic.isMeetLogic(mLastPopType, mLastPopCards, selectedCards) + ", " + mLastPopIndex);
+			if(GameLogic.isMeetLogic(mLastPopType, mLastPopCards, selectedCards) || mLastPopIndex == Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal()){
 				popSelectedCards();
-				mLastPopIndex = INDEX_OF_PLAYER;
-				initAITurn();
-				mIndexOfCurrentTurn = INDEX_OF_RIGHT;
-				inAITurn();
+				
 			} else{
 				restoreTouchCards();
 				invalidate();
 			}
-		} else if(index == INDEX_OF_NOTE){
+		} else if(index == Index_Of_Current_Action.INDEX_OF_NOTE.ordinal()){
 			restoreTouchCards();
 			List<Integer> indexList = mGameAI.getAIPopCardsIndex(mLastPopType, mLastPopCards, mPlayerCards, mPlayerPopCards);
 			Log.d("DOUDOU", indexList.toString() + "");
@@ -443,7 +455,6 @@ public class GameView extends View{
 		mNeedShowPlayerDisableAction = false;
 		invalidate();
 		if(GameLogic.isGameOver(mPlayerCards, mLeftCards, mRightCards)){
-			cancelAITurn();
 			initStateForNewGame();
 			startNewGame();
 			return ;
@@ -453,21 +464,23 @@ public class GameView extends View{
 			mLastPopCards.clear();
 			mLastPopCards.addAll(mPlayerPopCards);
 		}
+		mLastPopIndex = Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal();
+		initAITurn();
+		mIndexOfCurrentTurn = Index_Of_Current_Turn.INDEX_OF_RIGHT.ordinal();
+		inAITurn();
 	}
 	
 	
 	private void inAITurn()
 	{
-		mAITurnCountDownTimer.start();
-	}
-	private void cancelAITurn()
-	{
-		mAITurnCountDownTimer.cancel();
+		Message message = Message.obtain();
+		message.what = INDEX_AI_RIGHT;
+		mHandler.sendMessageDelayed(message, WAIT_AI_TIME);
 	}
 	private void handleLeftTurn()
 	{
 		mLeftPopCards.clear();
-		if(mLastPopIndex == INDEX_OF_LEFT){
+		if(mLastPopIndex == Index_Of_Current_Turn.INDEX_OF_LEFT.ordinal()){
 			mLastPopType = CombinationType.NEWROUND;
 		}
 		getLeftPopCards();
@@ -480,9 +493,8 @@ public class GameView extends View{
 			mNeedShowLeftDisableAction = false;
 		}
 		invalidate();
-		mIndexOfCurrentTurn = INDEX_OF_PLAYER;
+		mIndexOfCurrentTurn = Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal();
 		if(GameLogic.isGameOver(mPlayerCards, mLeftCards, mRightCards)){
-			cancelAITurn();
 			initStateForNewGame();
 			startNewGame();
 			return ;
@@ -491,13 +503,13 @@ public class GameView extends View{
 			mLastPopType = GameLogic.getCardsType(mLeftPopCards);
 			mLastPopCards.clear();
 			mLastPopCards.addAll(mLeftPopCards);
-			mLastPopIndex = INDEX_OF_LEFT;
+			mLastPopIndex = Index_Of_Current_Turn.INDEX_OF_LEFT.ordinal();
 		}
 	}
 	private void handleRightTurn()
 	{
 		mRightPopCards.clear();
-		if(mLastPopIndex == INDEX_OF_RIGHT){
+		if(mLastPopIndex == Index_Of_Current_Turn.INDEX_OF_RIGHT.ordinal()){
 			mLastPopType = CombinationType.NEWROUND;
 		}
 		getRightPopCards();
@@ -510,9 +522,8 @@ public class GameView extends View{
 			mNeedShowRightDisableAction = false;
 		}
 		invalidate();
-		mIndexOfCurrentTurn = INDEX_OF_LEFT;
+		mIndexOfCurrentTurn = Index_Of_Current_Turn.INDEX_OF_LEFT.ordinal();
 		if(GameLogic.isGameOver(mPlayerCards, mLeftCards, mRightCards)){
-			cancelAITurn();
 			initStateForNewGame();
 			startNewGame();
 			return ;
@@ -521,7 +532,7 @@ public class GameView extends View{
 			mLastPopType = GameLogic.getCardsType(mRightPopCards);
 			mLastPopCards.clear();
 			mLastPopCards.addAll(mRightPopCards);
-			mLastPopIndex = INDEX_OF_RIGHT;
+			mLastPopIndex = Index_Of_Current_Turn.INDEX_OF_RIGHT.ordinal();
 		}
 	}
 	
