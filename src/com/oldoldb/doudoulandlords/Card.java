@@ -47,4 +47,13 @@ public class Card extends BaseCard{
 		this.width = bitmap.getWidth();
 		this.height = bitmap.getHeight();
 	}
+	@Override
+	protected Object clone() throws CloneNotSupportedException {
+		// TODO Auto-generated method stub
+		Card card = new Card(bitmap, backBitmap, cardType);
+		card.width = card.getBitmap().getWidth();
+		card.height = card.getBitmap().getHeight();
+		return card;
+	}
+	
 }

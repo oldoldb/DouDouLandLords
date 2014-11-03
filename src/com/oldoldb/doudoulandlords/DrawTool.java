@@ -42,6 +42,9 @@ public class DrawTool {
 		drawAction(noAction, canvas);
 		drawAction(noteAction, canvas);
 	}
+	public void drawLordsCards(int range, Canvas canvas, List<Card> lordsCards){
+		drawCardsInRange(lordsCards, canvas, range, false);
+	}
 	public void drawPlayerCards(int range, Canvas canvas, List<Card> playerCards)
 	{
 		drawCardsInRange(playerCards, canvas, range, false);

@@ -42,7 +42,6 @@ public class BaseCard implements Comparable<BaseCard>{
 		this.cardType = cardType;
 		this.sortValue = calculateSortValue(cardType);
 	}
-	
 	private int calculateSortValue(CardType cardType)
 	{
 		if(cardType.getColor() == Color.None){
@@ -55,6 +54,8 @@ public class BaseCard implements Comparable<BaseCard>{
 			return cardType.getValue() * 4 + cardType.getColor().ordinal() % 4;
 		}
 	}
+	
+	
 	@Override
 	public int compareTo(BaseCard another) {
 		// TODO Auto-generated method stub

@@ -221,8 +221,22 @@ public class GameLogic {
 	
 	public static void sortCards(List<Card> playerCards, List<Card> leftCards, List<Card> rightCards)
 	{
+		sortPlayerCards(playerCards);
+		sortLeftCards(leftCards);
+		sortRightCards(rightCards);
+	}
+	
+	public static void sortPlayerCards(List<Card> playerCards)
+	{
 		Collections.sort(playerCards);
+	}
+	
+	private static void sortLeftCards(List<Card> leftCards)
+	{
 		Collections.sort(leftCards);
+	}
+	private static void sortRightCards(List<Card> rightCards)
+	{
 		Collections.sort(rightCards);
 	}
 }

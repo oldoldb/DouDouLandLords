@@ -2,6 +2,7 @@ package com.oldoldb.doudoulandlords;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.graphics.Bitmap;
@@ -51,12 +52,14 @@ public class GameView extends View{
 	private List<Card> mPlayerPopCards;
 	private List<Card> mLeftPopCards;
 	private List<Card> mRightPopCards; 
-	private List<Card> mLastPopCards; 
+	private List<Card> mLastPopCards;
+	private List<Card> mLordsCards; 
 	private boolean mNeedShowAction = false;
 	private boolean mNeedShowPlayerDisableAction = false;
 	private boolean mNeedShowLeftDisableAction = false;
 	private boolean mNeedShowRightDisableAction = false;
 	private boolean mNeedShowPopCards = false;
+	private boolean mNeedShowLordsCards = false;
 	private int mLastPopIndex;
 	private int mIndexOfCurrentTurn;
 	private boolean mStartNewGame = true;
@@ -130,6 +133,7 @@ public class GameView extends View{
 		mNeedShowAction = false;
 		mNeedShowPopCards = false;
 		mNeedDispatchCards = true;
+		mNeedShowLordsCards = false;
 		mStartNewGame = true;
 		mPlayerCards.clear();
 		mLeftCards.clear();
@@ -138,6 +142,7 @@ public class GameView extends View{
 		mLeftPopCards.clear();
 		mRightPopCards.clear();
 		mLastPopCards.clear();
+		mLordsCards.clear();
 		mLastPopType = CombinationType.NEWROUND;
 		mLastPopIndex = Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal();
 		mIndexOfCurrentTurn = Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal();
@@ -163,6 +168,7 @@ public class GameView extends View{
 		mLeftCards = new ArrayList<Card>();
 		mRightCards = new ArrayList<Card>();
 		mLastPopCards = new ArrayList<Card>();
+		mLordsCards = new ArrayList<Card>();
 		mIndexOfDispatchCard = 0;
 		mIndexOfDispatchLeftCard = 0;
 		mIndexOfDispatchRightCard = 0;
@@ -212,6 +218,13 @@ public class GameView extends View{
 				// TODO Auto-generated method stub
 				mNeedDispatchCards = false;
 				mNeedShowAction = true;
+				mNeedShowLordsCards = true;
+				try {
+					addLordsCards();
+				} catch (CloneNotSupportedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				invalidate();
 				mStartNewGame = false;
 			}
@@ -247,6 +260,17 @@ public class GameView extends View{
 			
 		};
 	}
+	private void addLordsCards() throws CloneNotSupportedException
+	{
+		int size = mLordsCards.size();
+		for(int i=0;i<size;i++){
+			Card card = (Card) mLordsCards.get(i).clone();
+			card.setSelected(true);
+			mPlayerCards.add(card);
+		}
+		GameLogic.sortPlayerCards(mPlayerCards);
+		setPlayerCardsPosition();
+	}
 	public void startNewGame()
 	{
 		mStartNewGame = true;
@@ -255,6 +279,7 @@ public class GameView extends View{
 		fillInEachPlayer();
 		GameLogic.sortCards(mPlayerCards, mLeftCards, mRightCards);
 		setCardPosition();
+		setLordsCardsPosition();
 		dispatchCards(mPlayerCards.size());
 	}
 	private void fillInEachPlayer()
@@ -263,6 +288,10 @@ public class GameView extends View{
 			mPlayerCards.add(mAllCards.get(PLAYER_NUM * i));
 			mLeftCards.add(mAllCards.get(PLAYER_NUM * i + 1));
 			mRightCards.add(mAllCards.get(PLAYER_NUM * i + 2));
+		}
+		int size = mAllCards.size();
+		for(int i=BASE_NUM*3;i<size;i++){
+			mLordsCards.add(mAllCards.get(i));
 		}
 	}
 	
@@ -287,6 +316,9 @@ public class GameView extends View{
 			mDrawTool.drawPlayerCards(mPlayerCards.size(), canvas, mPlayerCards);
 			mDrawTool.drawLeftCards(mLeftCards.size(), canvas, mLeftCards);
 			mDrawTool.drawRightCards(mRightCards.size(), canvas, mRightCards);
+		}
+		if(mNeedShowLordsCards){
+			mDrawTool.drawLordsCards(mLordsCards.size(), canvas, mLordsCards);
 		}
 		if(mNeedShowAction){
 			mDrawTool.drawAction(canvas, mYesAction, mNoAction, mNoteAction);
@@ -560,7 +592,17 @@ public class GameView extends View{
 	
 	
 	
-	
+	private void setLordsCardsPosition()
+	{
+		int size = mLordsCards.size();
+		int startX = (mDisplayWidth - mCardWidth * (size + 1)) / 2;
+		int startY = mCardHeight * 3 / 2;
+		for(int i=0;i<size;i++){
+			Card card = mLordsCards.get(i);
+			card.setX(startX + i * mCardWidth * 3 / 2);
+			card.setY(startY);
+		}
+	}
 	
 	
 	private void setCardPosition()
@@ -578,13 +620,16 @@ public class GameView extends View{
 			Card card = mPlayerCards.get(i);
 			card.setX(startX + i * card.getWidth() / 2);
 			card.setY(startY);
+			if(card.isSelected()){
+				card.setY(card.getY() - card.getHeight() / 2);
+			}
 		}
 	}
 	private void setLeftCardsPosition()
 	{
 		int size = mLeftCards.size();
 		int startX = mCardWidth;
-		int startY = (mDisplayHeight - (size + 1) / 2 * mCardHeight) / 2;
+		int startY = (mDisplayHeight - (size + 3) / 2 * mCardHeight) / 2;
 		for(int i=0;i<size;i++){
 			Card card = mLeftCards.get(i);
 			card.setX(startX);
@@ -595,7 +640,7 @@ public class GameView extends View{
 	{
 		int size = mRightCards.size();
 		int startX = mDisplayWidth - 2 * mCardWidth;
-		int startY = (mDisplayHeight - (size + 1) / 2 * mCardHeight) / 2;
+		int startY = (mDisplayHeight - (size + 3) / 2 * mCardHeight) / 2;
 		for(int i=0;i<size;i++){
 			Card card = mRightCards.get(i);
 			card.setX(startX);
