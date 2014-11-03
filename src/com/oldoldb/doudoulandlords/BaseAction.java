@@ -3,7 +3,15 @@ package com.oldoldb.doudoulandlords;
 import android.graphics.Bitmap;
 
 public class BaseAction {
-	protected Bitmap bitmap;
+	protected Bitmap showBitmap;
+	protected Bitmap baseBitmap;
+	public Bitmap getBaseBitmap() {
+		return baseBitmap;
+	}
+
+	public void setBaseBitmap(Bitmap baseBitmap) {
+		this.baseBitmap = baseBitmap;
+	}
 	protected int x;
 	protected int y;
 	protected int width;
@@ -24,12 +32,12 @@ public class BaseAction {
 	}
 	private int height;
 	
-	public Bitmap getBitmap() {
-		return bitmap;
+	public Bitmap getShowBitmap() {
+		return showBitmap;
 	}
 
-	public void setBitmap(Bitmap bitmap) {
-		this.bitmap = bitmap;
+	public void setShowBitmap(Bitmap bitmap) {
+		this.showBitmap = bitmap;
 	}
 
 	public int getX() {
@@ -49,7 +57,8 @@ public class BaseAction {
 	}
 	public BaseAction(Bitmap bitmap)
 	{
-		this.bitmap = bitmap;
+		this.baseBitmap = bitmap;
+		this.showBitmap = bitmap;
 		this.width = bitmap.getWidth();
 		this.height = bitmap.getHeight();
 	}

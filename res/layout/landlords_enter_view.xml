@@ -12,8 +12,7 @@
         android:layout_marginTop="50dp"
         android:layout_alignParentRight="true"
         android:layout_marginRight="50dp"
-        android:text="@string/text_start_new_game"
-        android:background="#00000000" >
+        android:background="@drawable/button_start_selector" >
         
     </Button>
     
@@ -25,8 +24,7 @@
         android:layout_below="@id/button_start_new_game"
         android:layout_marginTop="100dp"
         android:layout_marginRight="50dp"
-        android:text="@string/text_exit_game"
-        android:background="#00000000">
+        android:background="@drawable/button_exit_selector">
         
     </Button>
 

@@ -64,6 +64,14 @@ public class DrawTool {
 		canvas.drawBitmap(backgroundBitmap, 0, 0, null);
 	}	
 	
+	public void changeDrawableOnTouchAction(UserAction action)
+	{
+		action.setShowBitmap(action.getTouchBitmap());
+	}
+	public void resetDrawableOnTouchAction(UserAction action)
+	{
+		action.setShowBitmap(action.getBaseBitmap());
+	}
 	private void drawCard(Card card, Canvas canvas, boolean isBack)
 	{
 		if(isBack){
@@ -78,7 +86,7 @@ public class DrawTool {
 	}
 	private void drawAction(BaseAction baseAction, Canvas canvas)
 	{
-		canvas.drawBitmap(baseAction.getBitmap(), baseAction.getX(), baseAction.getY(), null);
+		canvas.drawBitmap(baseAction.getShowBitmap(), baseAction.getX(), baseAction.getY(), null);
 	}
 	private void drawCards(List<Card> cards, Canvas canvas, boolean isBack)
 	{

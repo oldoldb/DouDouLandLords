@@ -12,8 +12,10 @@ import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.GestureDetector.SimpleOnGestureListener;
 
 import com.oldoldb.doudoulandlords.CardColor.Color;
 import com.oldoldb.doudoulandlords.GameLogic.CombinationType;
@@ -88,7 +90,7 @@ public class GameView extends View{
 	private DrawTool mDrawTool;
 	private CountDownTimer mDispatchCountDownTimer;
 	private Handler mHandler;
-	
+	private GestureDetector mGestureDetector = new GestureDetector(getContext(), new MyGestureListener());
 	
 	public GameView(Context context)
 	{
@@ -188,9 +190,12 @@ public class GameView extends View{
 	}
 	private void initActions()
 	{
-		mYesAction = new UserAction(mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_yes), mActionWidth, mActionHeight));
-		mNoAction = new UserAction(mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_no), mActionWidth, mActionHeight));
-		mNoteAction = new UserAction(mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_note), mActionWidth, mActionHeight));
+		mYesAction = new UserAction(mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_yes), mActionWidth, mActionHeight),
+				mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_yes_touch), mActionWidth, mActionHeight));
+		mNoAction = new UserAction(mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_no), mActionWidth, mActionHeight),
+				mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_no_touch), mActionWidth, mActionHeight));
+		mNoteAction = new UserAction(mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_note), mActionWidth, mActionHeight),
+				mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.action_note_touch), mActionWidth, mActionHeight));
 		mPlayerDisableAction = new BaseAction(mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.disable_player), mPlayerDisableActionWidth, mPlayerDisableActionHeight));
 		mLeftDisableAction =  new BaseAction(mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.disable_ai), mAIDisableActionWidth, mAIDisableActionHeight));
 		mRightDisableAction =  new BaseAction(mDrawTool.getTargetSizeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.disable_ai), mAIDisableActionWidth, mAIDisableActionHeight));
@@ -321,6 +326,7 @@ public class GameView extends View{
 			mDrawTool.drawLordsCards(mLordsCards.size(), canvas, mLordsCards);
 		}
 		if(mNeedShowAction){
+			Log.d("DOUDOU", "drawAction");
 			mDrawTool.drawAction(canvas, mYesAction, mNoAction, mNoteAction);
 		}
 		if(mNeedShowPopCards){
@@ -336,23 +342,12 @@ public class GameView extends View{
 			mDrawTool.drawDisableAction(mRightDisableAction, canvas);
 		}
 	}
-
+	
+	
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
 		// TODO Auto-generated method stub
-		switch (event.getAction()) {
-		case MotionEvent.ACTION_DOWN:
-			break;
-		case MotionEvent.ACTION_UP:
-			Log.d("DOUDOU", mStartNewGame + "hehe");
-			if(!mStartNewGame){
-				handleActionUpEvent(event);
-			}
-			break;
-		default:
-			break;
-		}
-		return true;
+		return mGestureDetector.onTouchEvent(event);
 	}
 	private boolean isTouchInCard(Card card, int x, int y)
 	{
@@ -421,7 +416,6 @@ public class GameView extends View{
 			return ;
 		} 
 		index = getTouchActionIndex(event);
-		Log.d("DOUDOU", index + " , " + mIndexOfCurrentTurn + " , ");
 		if(index != INVALID_INDEX && mIndexOfCurrentTurn == Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal()){
 			handleTouchActionEvent(index);
 			return ;
@@ -430,8 +424,8 @@ public class GameView extends View{
 	
 	private void handleTouchActionEvent(int index)
 	{
-		Log.d("DOUDOU", index + "");
 		if(index == Index_Of_Current_Action.INDEX_OF_NO.ordinal()){
+			mDrawTool.resetDrawableOnTouchAction(mNoAction);
 			if(mLastPopIndex != Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal()){
 				restoreTouchCards();
 				mNeedShowPlayerDisableAction = true;
@@ -442,22 +436,26 @@ public class GameView extends View{
 				inAITurn();
 			}
 		} else if(index == Index_Of_Current_Action.INDEX_OF_YES.ordinal()){
+			mDrawTool.resetDrawableOnTouchAction(mYesAction);
 			List<Card> selectedCards = getSelectedCards();
 			if(selectedCards.size() == 0){
 				return ;
 			}
-			Log.d("DOUDOU", GameLogic.isMeetLogic(mLastPopType, mLastPopCards, selectedCards) + ", " + mLastPopIndex);
-			if(GameLogic.isMeetLogic(mLastPopType, mLastPopCards, selectedCards) || mLastPopIndex == Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal()){
-				popSelectedCards();
-				
+			if(GameLogic.isMeetLogic(mLastPopType, mLastPopCards, selectedCards) && mIndexOfCurrentTurn == Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal()){
+				if(GameLogic.getCardsType(selectedCards) != CombinationType.NONE){
+					popSelectedCards();
+				} else {
+					restoreTouchCards();
+					invalidate();
+				}
 			} else{
 				restoreTouchCards();
 				invalidate();
 			}
 		} else if(index == Index_Of_Current_Action.INDEX_OF_NOTE.ordinal()){
+			mDrawTool.resetDrawableOnTouchAction(mNoteAction);
 			restoreTouchCards();
 			List<Integer> indexList = mGameAI.getAIPopCardsIndex(mLastPopType, mLastPopCards, mPlayerCards, mPlayerPopCards);
-			Log.d("DOUDOU", indexList.toString() + "");
 			for(int i=0;i<indexList.size();i++){
 				Card card = mPlayerCards.get(indexList.get(i));
 				card.setSelected(true);
@@ -653,9 +651,9 @@ public class GameView extends View{
 		int middleY = mDisplayHeight - 4 * mActionHeight;
 		mYesAction.setX(middleX - mYesAction.getWidth() / 2);
 		mYesAction.setY(middleY);
-		mNoteAction.setX(middleX + mNoteAction.getWidth() / 2);
+		mNoteAction.setX(middleX + mNoteAction.getWidth());
 		mNoteAction.setY(middleY);
-		mNoAction.setX(middleX - mNoAction.getWidth() * 3 / 2);
+		mNoAction.setX(middleX - mNoAction.getWidth() * 2);
 		mNoAction.setY(middleY);
 		setPlayerDisablePosition();
 		setLeftDisablePosition();
@@ -714,5 +712,49 @@ public class GameView extends View{
 		int startY = (mDisplayHeight - mAIDisableActionHeight) / 2;
 		mRightDisableAction.setX(startX);
 		mRightDisableAction.setY(startY);
+	}
+	
+	private class MyGestureListener extends SimpleOnGestureListener
+	{
+
+		
+		@Override
+		public boolean onSingleTapUp(MotionEvent e) {
+			// TODO Auto-generated method stub
+			if(!mStartNewGame){
+				handleActionUpEvent(e);
+			}
+			return false;
+		}
+
+		@Override
+		public boolean onScroll(MotionEvent e1, MotionEvent e2,
+				float distanceX, float distanceY) {
+			// TODO Auto-generated method stub
+			int index1 = getTouchCardsIndex(e1);
+			int index2 = getTouchCardsIndex(e2);
+			if(index1 != index2 && index2 != INVALID_INDEX){
+				moveTouchCard(mPlayerCards.get(index2));
+			}
+			return super.onScroll(e1, e2, distanceX, distanceY);
+		}
+
+		@Override
+		public boolean onDown(MotionEvent e) {
+			// TODO Auto-generated method stub
+			int index = getTouchActionIndex(e);
+			if(index != INVALID_INDEX && mIndexOfCurrentTurn == Index_Of_Current_Turn.INDEX_OF_PLAYER.ordinal()){
+				if(index == Index_Of_Current_Action.INDEX_OF_YES.ordinal()){
+					mDrawTool.changeDrawableOnTouchAction(mYesAction);
+				} else if(index == Index_Of_Current_Action.INDEX_OF_NO.ordinal()){
+					mDrawTool.changeDrawableOnTouchAction(mNoAction);
+				} else if(index == Index_Of_Current_Action.INDEX_OF_NOTE.ordinal()){
+					mDrawTool.changeDrawableOnTouchAction(mNoteAction);
+				}
+				invalidate();
+			}
+			return true;
+		}
+		
 	}
 }
