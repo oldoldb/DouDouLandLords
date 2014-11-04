@@ -17,8 +17,22 @@ public class GameActivity extends Activity {
 		getWindowManager().getDefaultDisplay().getMetrics(dm);
 		mGameView = new GameView(this, dm.widthPixels, dm.heightPixels);
 		setContentView(mGameView);
+		Utils.startBackMusic(this, R.raw.game_music);
 		mGameView.startNewGame();
 	}
 
+	@Override
+	protected void onResume() {
+		// TODO Auto-generated method stub
+		Utils.startBackMusic(this, R.raw.game_music);
+		super.onResume();
+	}
+	@Override
+	protected void onPause() {
+		// TODO Auto-generated method stub
+		Utils.stopBackMusic();
+		super.onPause();
+	}
+	
 	
 }

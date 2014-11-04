@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <PreferenceCategory
+        android:title="@string/pref_media_title"
+        android:key="@string/pref_media_key">
+        <CheckBoxPreference
+            android:key="@string/pref_enter_music_key"
+            android:summary="@string/pref_enter_music_summary"
+            android:title="@string/pref_enter_music_title"
+            android:defaultValue="true" >
+            
+        </CheckBoxPreference>
+        <CheckBoxPreference
+            android:key="@string/pref_game_music_key"
+            android:summary="@string/pref_game_music_summary"
+            android:title="@string/pref_game_music_title"
+            android:defaultValue="true" >
+            
+        </CheckBoxPreference>
+    </PreferenceCategory>
+    
+</PreferenceScreen>

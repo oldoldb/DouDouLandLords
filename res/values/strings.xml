@@ -10,4 +10,13 @@
     <string name="text_yes">出</string>
     <string name="text_note">提示</string>
     <string name="text_no">不出</string>
+    
+    <string name="pref_media_title">媒体设置</string>
+    <string name="pref_media_key">pref_media_key</string>
+    <string name="pref_enter_music_title">开场音乐</string>
+    <string name="pref_enter_music_key">pref_enter_music_key</string>
+    <string name="pref_enter_music_summary">是否播放开场音乐</string>
+    <string name="pref_game_music_title">游戏音乐</string>
+    <string name="pref_game_music_key">pref_game_music_key</string>
+    <string name="pref_game_music_summary">是否播放游戏音乐</string>
 </resources>
