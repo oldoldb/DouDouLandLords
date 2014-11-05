@@ -14,7 +14,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name="com.oldoldb.doudoulandlords.MainActivity"
+            android:name="game.MainActivity"
             android:label="@string/app_name" 
             android:screenOrientation="landscape" >
             <intent-filter>
@@ -24,11 +24,11 @@
             </intent-filter>
         </activity>
         <activity 
-            android:name="com.oldoldb.doudoulandlords.GameActivity"
+            android:name="game.GameActivity"
             android:screenOrientation="landscape">
         </activity>
         <activity 
-            android:name="com.oldoldb.doudoulandlords.SettingActivity"
+            android:name="prefs.SettingActivity"
             android:screenOrientation="landscape">
         </activity>
         <service 
